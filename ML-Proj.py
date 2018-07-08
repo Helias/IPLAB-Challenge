@@ -2,8 +2,6 @@
 import torch
 import numpy as np
 
-from torchvision.datasets import MNIST
-from torchvision.datasets import CIFAR100
 from torchvision import transforms
 
 from torch import nn
@@ -19,6 +17,23 @@ from os import path
 
 np.random.seed(123)
 torch.random.manual_seed(123)
+
+def plot_logs_classification(logs):
+    training_losses, training_accuracies, test_losses, test_accuracies = \
+    logs[0]['train'], logs[1]['train'], logs[0]['test'], logs[1]['test']
+    plt.figure(figsize=(18,6))
+    plt.subplot(121)
+    plt.plot(training_losses)
+    plt.plot(test_losses)
+    plt.legend(['Training Loss','Test Losses'])
+    plt.grid()
+    plt.subplot(122)
+    plt.plot(training_accuracies)
+    plt.plot(test_accuracies)
+    plt.legend(['Training Accuracy','Test Accuracy'])
+    plt.grid()
+    plt.show()
+
 
 class MiniAlexNetV3(nn.Module):
     def __init__(self, input_channels=3, out_classes=16):
@@ -168,7 +183,7 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
             print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
-    print
+            print "\n"
 
     return model, (losses, accuracies)
 
@@ -204,7 +219,7 @@ test_set = ScenesDataset2('prj_dataset/images','prj_dataset/validation_list.txt'
 train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
 
-mini_alexnet_v3_cifar = MiniAlexNetV3()
-mini_alexnet_v3_cifar, mini_alexnet_v3_cifar_logs = train_classification(mini_alexnet_v3_cifar, \
-                                                                   train_loader=train_loader, \
-                                                                 test_loader=test_loader, epochs=30)
+mini_alexnet_v3 = MiniAlexNetV3()
+mini_alexnet_v3, mini_alexnet_v3_logs = train_classification(mini_alexnet_v3, train_loader=train_loader, test_loader=test_loader, epochs=10)
+
+plot_logs_classification(mini_alexnet_v3_logs)
