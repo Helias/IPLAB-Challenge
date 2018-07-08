@@ -12,6 +12,7 @@ from torch.utils.data.dataset import Dataset
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 from matplotlib import pyplot as plt
 from PIL import Image
 from os import path
@@ -136,7 +137,7 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
     loaders = {'train':train_loader, 'test':test_loader}
     losses = {'train':[], 'test':[]}
     accuracies = {'train':[], 'test':[]}
-    cms = {'train':[], 'test':[]}
+    preds = {'train':[], 'test':[]}
     if torch.cuda.is_available():
         model=model.cuda()
 
@@ -166,15 +167,21 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     optimizer.step()
                     optimizer.zero_grad()
                 acc = accuracy_score(y.data,output.max(1)[1].data)
-                cm =  confusion_matrix(y.data,output.max(1)[1].data)
-
+                if e == len(range(epochs)) -1:
+                    cm =  confusion_matrix(y.data,output.max(1)[1].data)
+                    score = f1_score(y.data,output.max(1)[1].data, average = None)
                 epoch_loss+=l.data[0]*x.shape[0]
                 epoch_acc+=acc*x.shape[0]
                 samples+=x.shape[0]
 
                 print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
-
+                if e == len(range(epochs)) -1:
+                    print i
+                    print len(loaders[mode])-1
+                    print "confusion matrix: \n"
+                    print cm
+                    print "F1 score: ", (score)
 
 
             epoch_loss/=samples
@@ -182,7 +189,6 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
             losses[mode].append(epoch_loss)
             accuracies[mode].append(epoch_acc)
-            cms[mode].append(cm)
             print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
             print "\n"
@@ -227,5 +233,5 @@ if path.isfile('model.pth'):
 
 mini_alexnet_v3_cifar, mini_alexnet_v3_cifar_logs = train_classification(mini_alexnet_v3_cifar, \
                                                                    train_loader=train_loader, \
-                                                                 test_loader=test_loader, epochs=30)
-plot_logs_classification(mini_alexnet_v3_logs)
+                                                                 test_loader=test_loader, epochs=3)
+plot_logs_classification(mini_alexnet_v3_cifar_logs)
