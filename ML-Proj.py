@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
 
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 from matplotlib import pyplot as plt
 from PIL import Image
 from os import path
@@ -120,7 +121,7 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
     loaders = {'train':train_loader, 'test':test_loader}
     losses = {'train':[], 'test':[]}
     accuracies = {'train':[], 'test':[]}
-
+    cms = {'train':[], 'test':[]}
     if torch.cuda.is_available():
         model=model.cuda()
 
@@ -150,6 +151,7 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     optimizer.step()
                     optimizer.zero_grad()
                 acc = accuracy_score(y.data,output.max(1)[1].data)
+                cm =  confusion_matrix(y.data,output.max(1)[1].data)
 
                 epoch_loss+=l.data[0]*x.shape[0]
                 epoch_acc+=acc*x.shape[0]
@@ -165,10 +167,9 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
             losses[mode].append(epoch_loss)
             accuracies[mode].append(epoch_acc)
-
+            cms[mode].append(cm)
             print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
-                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
-    print
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc)
 
     return model, (losses, accuracies)
 
@@ -205,6 +206,9 @@ train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
 
 mini_alexnet_v3_cifar = MiniAlexNetV3()
+if path.isfile('model.pth'):
+    mini_alexnet_v3_cifar.load_state_dict(torch.load('model.pth'))
+
 mini_alexnet_v3_cifar, mini_alexnet_v3_cifar_logs = train_classification(mini_alexnet_v3_cifar, \
                                                                    train_loader=train_loader, \
                                                                  test_loader=test_loader, epochs=30)
