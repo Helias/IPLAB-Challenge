@@ -167,22 +167,23 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     optimizer.step()
                     optimizer.zero_grad()
                 acc = accuracy_score(y.data,output.max(1)[1].data)
-                if e == len(range(epochs)) -1:
-                    cm =  confusion_matrix(y.data,output.max(1)[1].data)
-                    score = f1_score(y.data,output.max(1)[1].data, average = None)
                 epoch_loss+=l.data[0]*x.shape[0]
                 epoch_acc+=acc*x.shape[0]
                 samples+=x.shape[0]
 
                 print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
-                if e == len(range(epochs)) -1:
-                    print i
-                    print len(loaders[mode])-1
-                    print "confusion matrix: \n"
-                    print cm
-                    print "F1 score: ", (score)
 
+            if e == len(range(epochs)) -1:
+                cm =  confusion_matrix(y.data,output.max(1)[1].data)
+                score = f1_score(y.data,output.max(1)[1].data, average = None)
+
+            if e == len(range(epochs)) -1:
+                print i
+                print len(loaders[mode])-1
+                print "\n Confusion Matrix:"
+                print cm
+                print "\n F1 score: ", (score) , "\n"
 
             epoch_loss/=samples
             epoch_acc/=samples
@@ -227,11 +228,11 @@ test_set = ScenesDataset2('prj_dataset/images','prj_dataset/validation_list.txt'
 train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
 
-mini_alexnet_v3_cifar = MiniAlexNetV3()
+mini_alexnet_v3 = MiniAlexNetV3()
 if path.isfile('model.pth'):
-    mini_alexnet_v3_cifar.load_state_dict(torch.load('model.pth'))
+    mini_alexnet_v3.load_state_dict(torch.load('model.pth'))
 
-mini_alexnet_v3_cifar, mini_alexnet_v3_cifar_logs = train_classification(mini_alexnet_v3_cifar, \
+mini_alexnet_v3, mini_alexnet_v3_logs = train_classification(mini_alexnet_v3, \
                                                                    train_loader=train_loader, \
                                                                  test_loader=test_loader, epochs=3)
-plot_logs_classification(mini_alexnet_v3_cifar_logs)
+plot_logs_classification(mini_alexnet_v3_logs)
