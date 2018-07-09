@@ -20,7 +20,9 @@ from os import path
 np.random.seed(123)
 torch.random.manual_seed(123)
 
-def plot_logs_classification(logs):
+# CLassification
+
+def plot_logs(logs):
     training_losses, training_accuracies, test_losses, test_accuracies = \
     logs[0]['train'], logs[1]['train'], logs[0]['test'], logs[1]['test']
     plt.figure(figsize=(18,6))
@@ -36,6 +38,31 @@ def plot_logs_classification(logs):
     plt.grid()
     plt.show()
 
+class LocalDataset(Dataset):
+    def __init__(self, base_path, txt_list, transform=None, reg=False):
+        self.base_path=base_path
+        self.data = np.loadtxt(txt_list,dtype=str,delimiter=',')
+        self.transform = transform
+        self.reg = reg
+
+    def __getitem__(self, index):
+        img_path, x, y, u, v, c = self.data[index]
+
+        im = Image.open(path.join(self.base_path, img_path))
+
+        if self.transform is not None:
+            im = self.transform(im)
+
+        if self.reg == False:
+            label = int(c)
+        else:
+            label = torch.FloatTensor([float(x), float(y), float(u), float(v)])
+
+        return {'image' : im, 'label': label}
+
+
+    def __len__(self):
+        return len(self.data)
 
 class MiniAlexNetV3(nn.Module):
     def __init__(self, input_channels=3, out_classes=16):
@@ -87,44 +114,8 @@ class MiniAlexNetV3(nn.Module):
         x = self.classifier(x.view(x.shape[0],-1))
         return x
 
-class LocalDataset(Dataset):
-    def __init__(self, base_path, txt_list, transform=None, reg=False):
-        self.base_path=base_path
-        self.data = np.loadtxt(txt_list,dtype=str,delimiter=',')
-        self.transform = transform
-        self.reg = reg
-
-    def __getitem__(self, index):
-        img_path, x, y, u, v, c = self.data[index]
-
-        im = Image.open(path.join(self.base_path, img_path))
-
-        if self.transform is not None:
-            im = self.transform(im)
-
-        if self.reg == False:
-            label = int(c)
-        else:
-            # label = torch.LongTensor([float(x), float(y), float(u), float(v)])
-            # print "\n" + str(x) + " " + str(y) + " " + str(u) + " " + str(v) + "\n"
-            label = torch.FloatTensor([float(x), float(y), float(u), float(v)])
-            # label = np.vstack(label)
-            # label = label.flatten()
-
-        return {'image' : im, 'label': label}
-
-
-    def __len__(self):
-        return len(self.data)
-
 def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay = 0.000001, train_loader=0, test_loader=0, type_m="classification"):
-    if type_m == "classification":
-        criterion = nn.CrossEntropyLoss()
-    else:
-        criterion = nn.MultiLabelSoftMarginLoss()
-        # criterion = nn.L1Loss()
-        # criterion = nn.KLDivLoss()
-        # criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
 
     optimizer = SGD(model.parameters(),lr, momentum=momentum, weight_decay=weight_decay)
 
@@ -162,16 +153,15 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     l.backward()
                     optimizer.step()
                     optimizer.zero_grad()
-                if type_m == "classification":
 
-                    acc = accuracy_score(y.data,output.max(1)[1].data)
+                acc = accuracy_score(y.data,output.max(1)[1].data)
 
-                    epoch_loss += l.data[0] * x.shape[0]
-                    epoch_acc += acc * x.shape[0]
-                    samples += x.shape[0]
+                epoch_loss += l.data[0] * x.shape[0]
+                epoch_acc += acc * x.shape[0]
+                samples += x.shape[0]
 
-                    print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
-                            (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
+                print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
 
             # if e == len(range(epochs)) -1:
             #     cm =  confusion_matrix(y.data,output.max(1)[1].data)
@@ -185,19 +175,15 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
             epoch_loss/=samples
             losses[mode].append(epoch_loss)
-            if type_m == "classification":
-                epoch_acc/=samples
-                accuracies[mode].append(epoch_acc)
+            epoch_acc/=samples
+            accuracies[mode].append(epoch_acc)
 
-                print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
-                            (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
-                print "\n"
+            print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
+            print "\n"
 
             # save model
-            if type_m == "classification":
-                torch.save(model.state_dict(),'c_model-%d.pth'%(e+1,))
-            else:
-                torch.save(model.state_dict(),'r_model-%d.pth'%(e+1,))
+            torch.save(model.state_dict(),'c_model-%d.pth'%(e+1,))
 
             #print next(loaders['test'])
             # if e == len(range(epochs)) -1:
@@ -214,22 +200,21 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
     return model, (losses, accuracies)
 
-
-train_set2 = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt', transform=transforms.ToTensor(), reg=True)
-test_set2 = LocalDataset('prj_dataset','prj_dataset/validation_list.txt', transform=transforms.ToTensor(), reg=True)
+train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transforms.ToTensor(), reg=False)
+test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transforms.ToTensor(), reg=False)
 
 # mean, dev st. -> normalization
 # mean
 m = np.zeros(3)
-for sample in train_set2:
+for sample in train_set:
     m += sample['image'].sum(1).sum(1) # sum pixels per channels
-m = m/(len(train_set2)*256*256) # num_img * num_pixels
+m = m/(len(train_set)*256*256) # num_img * num_pixels
 
 # dev st.
 s = np.zeros(3)
-for sample in train_set2:
+for sample in train_set:
     s += ((sample['image']-torch.Tensor(m).view(3,1,1))**2).sum(1).sum(1)
-s = np.sqrt(s/(len(train_set2)*256*256))
+s = np.sqrt(s/(len(train_set)*256*256))
 
 transform_prj = transforms.Compose([transforms.RandomVerticalFlip(),
                                     transforms.ColorJitter(),
@@ -238,17 +223,11 @@ transform_prj = transforms.Compose([transforms.RandomVerticalFlip(),
                                     transforms.Normalize(m,s)
                                    ])
 
-# CLassification
 mini_alexnet_v3_class = MiniAlexNetV3(out_classes=16)
 
-# Regression
-mini_alexnet_v3_reg = MiniAlexNetV3(out_classes=4)
-
-if path.isfile('model.pth'):
+if path.isfile('c_model.pth'):
     mini_alexnet_v3_class.load_state_dict(torch.load('c_model.pth'))
-    mini_alexnet_v3_reg.load_state_dict(torch.load('r_model.pth'))
 
-# Classification
 train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transform_prj, reg=False)
 test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transform_prj, reg=False)
 
@@ -259,20 +238,4 @@ mini_alexnet_v3_class, mini_alexnet_v3_class_logs = train_classification(mini_al
                                                                    train_loader=train_loader, \
                                                                    test_loader=test_loader, \
                                                                    epochs=2)
-plot_logs_classification(mini_alexnet_v3_class_logs)
-
-
-# # Regression
-# train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transform_prj, reg=True)
-# test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transform_prj, reg=True)
-#
-# train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
-# test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
-#
-# mini_alexnet_v3_reg, mini_alexnet_v3_reg_logs = train_classification(mini_alexnet_v3_reg, \
-#                                                                    train_loader=train_loader, \
-#                                                                    test_loader=test_loader, \
-#                                                                    epochs=2, \
-#                                                                    type_m="regression")
-#
-# plot_logs_classification(mini_alexnet_v3_reg_logs)
+plot_logs(mini_alexnet_v3_class_logs)
