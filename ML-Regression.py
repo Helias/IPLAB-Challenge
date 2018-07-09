@@ -13,9 +13,12 @@ from torch.utils.data.dataset import Dataset
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 from matplotlib import pyplot as plt
 from PIL import Image
 from os import path
+
 
 np.random.seed(123)
 torch.random.manual_seed(123)
@@ -115,13 +118,10 @@ class MiniAlexNetV3(nn.Module):
         return x
 
 def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay = 0.000001, train_loader=0, test_loader=0, type_m="classification"):
-    if type_m == "classification":
-        criterion = nn.CrossEntropyLoss()
-    else:
-        criterion = nn.MultiLabelSoftMarginLoss()
-        # criterion = nn.L1Loss()
-        # criterion = nn.KLDivLoss()
-        # criterion = nn.MSELoss()
+    criterion = nn.MultiLabelSoftMarginLoss()
+    # criterion = nn.L1Loss()
+    # criterion = nn.KLDivLoss()
+    # criterion = nn.MSELoss()
 
     optimizer = SGD(model.parameters(),lr, momentum=momentum, weight_decay=weight_decay)
 
@@ -132,7 +132,11 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
     if torch.cuda.is_available():
         model = model.cuda()
 
+    tmp1 = [] # y data
+    tmp2 = [] # output data
+
     for e in range(epochs):
+        print "\n e: " + str(e) + "/" + str(epochs-1) + "\n"
         for mode in ['train', 'test']:
             if mode == 'train':
                 model.train()
@@ -159,9 +163,14 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     l.backward()
                     optimizer.step()
                     optimizer.zero_grad()
+
+                if e == epochs-1:
+                    tmp1.append(y.data)
+                    tmp2.append(output.max(1)[1].data)
+
                 if type_m == "classification":
 
-                    acc = accuracy_score(y.data,output.max(1)[1].data)
+                    acc = accuracy_score(y.data, output.max(1)[1].data)
 
                     epoch_loss += l.data[0] * x.shape[0]
                     epoch_acc += acc * x.shape[0]
@@ -169,52 +178,46 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
                     print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                             (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
+                else:
+                    samples = 1
 
-            # if e == len(range(epochs)) -1:
-            #     cm =  confusion_matrix(y.data,output.max(1)[1].data)
-            #     score = f1_score(y.data,output.max(1)[1].data, average = None)
-            #
-            #     print i
-            #     print len(loaders[mode])-1
-            #     print "\n Confusion Matrix:"
-            #     print cm
-            #     print "\n F1 score: ", (score) , "\n"
+                    print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. \t\t\t\t\t" %  \
+                            (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples),
 
-            # epoch_loss/=samples
-            epoch_loss = 1
+                # epoch_loss /= samples
+                epoch_loss = 1
+
 
             losses[mode].append(epoch_loss)
             if type_m == "classification":
-                epoch_acc/=samples
+                epoch_acc /= samples
                 accuracies[mode].append(epoch_acc)
 
                 print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                             (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
                 print "\n"
+            else:
+                print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f \t\t\t\t\t" %  \
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss),
 
             # save model
-            if type_m == "classification":
-                torch.save(model.state_dict(),'c_model-%d.pth'%(e+1,))
-            else:
-                torch.save(model.state_dict(),'r_model-%d.pth'%(e+1,))
+            torch.save(model.state_dict(),'r_model-%d.pth'%(e+1,))
 
-            #print next(loaders['test'])
-            #     cm =  confusion_matrix(targets,outputs.max(1)[1])
-            # if e == len(range(epochs)) -1:
-            # #     print Variable(loaders['test'])
-            # #     print Variable(loaders['test']).shape
-            #
-            #     # score = f1_score(y.data,output.max(1)[1].data, average = None)
-            #     # print i
-            #     # print len(loaders[mode])-1
-            #     print "\nconfusion matrix: \n"
-            #     print cm
-            #     # print "F1 score: ", (score)
+            print "\n"
+
+    print "\n\n#### RMS ####"
+    print "\n"
+    print tmp1
+    print "\n\n"
+    print tmp2
+    print "\n\n"
+    rms = sqrt(mean_squared_error(tmp1, tmp2))
+    print "RMS: " + str(rms) + "\n\n"
 
     return model, (losses, accuracies)
 
-train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transforms.ToTensor(), reg=False)
-test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transforms.ToTensor(), reg=False)
+train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transforms.ToTensor(), reg=True)
+test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transforms.ToTensor(), reg=True)
 
 # mean, dev st. -> normalization
 # mean
@@ -252,4 +255,4 @@ mini_alexnet_v3_reg, mini_alexnet_v3_reg_logs = train_classification(mini_alexne
                                                                    test_loader=test_loader, \
                                                                    epochs=2, \
                                                                    type_m="regression")
-plot_logs(mini_alexnet_v3_reg_logs)
+# plot_logs(mini_alexnet_v3_reg_logs)
