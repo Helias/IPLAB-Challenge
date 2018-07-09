@@ -137,7 +137,7 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
     loaders = {'train':train_loader, 'test':test_loader}
     losses = {'train':[], 'test':[]}
     accuracies = {'train':[], 'test':[]}
-    preds = {'train':[], 'test':[]}
+    #preds = {'train':[], 'test':[]}
     if torch.cuda.is_available():
         model=model.cuda()
 
@@ -151,6 +151,8 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
             epoch_loss = 0
             epoch_acc = 0
             samples = 0
+            outputs = []
+            targets = []
             for i, batch in enumerate(loaders[mode]):
                 #trasformiamo i tensori in variabili
                 x=Variable(batch['image'], requires_grad=True)
@@ -158,30 +160,19 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
 
                 if torch.cuda.is_available():
                     x, y = x.cuda(), y.cuda()
-
                 output = model(x)
                 l = criterion(output,y)
-
                 if mode=='train':
                     l.backward()
                     optimizer.step()
                     optimizer.zero_grad()
                 acc = accuracy_score(y.data,output.max(1)[1].data)
-                if e == len(range(epochs)) -1:
-                    cm =  confusion_matrix(y.data,output.max(1)[1].data)
-                    score = f1_score(y.data,output.max(1)[1].data, average = None)
+
                 epoch_loss+=l.data[0]*x.shape[0]
                 epoch_acc+=acc*x.shape[0]
                 samples+=x.shape[0]
-
                 print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
-                if e == len(range(epochs)) -1:
-                    print i
-                    print len(loaders[mode])-1
-                    print "confusion matrix: \n"
-                    print cm
-                    print "F1 score: ", (score)
 
 
             epoch_loss/=samples
@@ -192,6 +183,18 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
             print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
                         (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
             print "\n"
+            #print next(loaders['test'])
+            # if e == len(range(epochs)) -1:
+            # #     print Variable(loaders['test'])
+            # #     print Variable(loaders['test']).shape
+            #
+            #     cm =  confusion_matrix(targets,outputs.max(1)[1])
+            #     # score = f1_score(y.data,output.max(1)[1].data, average = None)
+            #     # print i
+            #     # print len(loaders[mode])-1
+            #     print "\nconfusion matrix: \n"
+            #     print cm
+            #     # print "F1 score: ", (score)
 
     return model, (losses, accuracies)
 
@@ -233,5 +236,5 @@ if path.isfile('model.pth'):
 
 mini_alexnet_v3_cifar, mini_alexnet_v3_cifar_logs = train_classification(mini_alexnet_v3_cifar, \
                                                                    train_loader=train_loader, \
-                                                                 test_loader=test_loader, epochs=3)
+                                                                 test_loader=test_loader, epochs=2)
 plot_logs_classification(mini_alexnet_v3_cifar_logs)
