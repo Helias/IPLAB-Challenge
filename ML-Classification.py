@@ -185,18 +185,6 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
             # save model
             torch.save(model.state_dict(),'c_model-%d.pth'%(e+1,))
 
-            #print next(loaders['test'])
-            # if e == len(range(epochs)) -1:
-            # #     print Variable(loaders['test'])
-            # #     print Variable(loaders['test']).shape
-            #
-            #     cm =  confusion_matrix(targets,outputs.max(1)[1])
-            #     # score = f1_score(y.data,output.max(1)[1].data, average = None)
-            #     # print i
-            #     # print len(loaders[mode])-1
-            #     print "\nconfusion matrix: \n"
-            #     print cm
-            #     # print "F1 score: ", (score)
 
     return model, (losses, accuracies)
 
@@ -231,11 +219,27 @@ if path.isfile('c_model.pth'):
 train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transform_prj, reg=False)
 test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transform_prj, reg=False)
 
-train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
-test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
+train_loader = DataLoader(train_set, batch_size=200, num_workers=2, shuffle=True)
+test_loader = DataLoader(test_set, batch_size=200, num_workers=2)
 
 mini_alexnet_v3_class, mini_alexnet_v3_class_logs = train_classification(mini_alexnet_v3_class, \
                                                                    train_loader=train_loader, \
                                                                    test_loader=test_loader, \
                                                                    epochs=2)
+predictions = []
+y_test = []
 plot_logs(mini_alexnet_v3_class_logs)
+for i in list(test_loader):
+    predictions.append(i['label'][0])
+    print i
+
+txt = np.loadtxt('prj_dataset/validation_list.txt',dtype=str,delimiter=',')
+
+for t in txt:
+    y_test.append(int(t[-1]))
+# print "t",y_test
+# print "\np",predictions
+
+
+cm = confusion_matrix(y_test,predictions)
+print cm
