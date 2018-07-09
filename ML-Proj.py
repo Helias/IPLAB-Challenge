@@ -162,17 +162,16 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
                     l.backward()
                     optimizer.step()
                     optimizer.zero_grad()
+                if type_m == "classification":
 
-                # acc = accuracy_score(y.data,output.max(1)[1].data)
+                    acc = accuracy_score(y.data,output.max(1)[1].data)
 
-                acc = 1
+                    epoch_loss += l.data[0] * x.shape[0]
+                    epoch_acc += acc * x.shape[0]
+                    samples += x.shape[0]
 
-                epoch_loss += l.data[0] * x.shape[0]
-                epoch_acc += acc * x.shape[0]
-                samples += x.shape[0]
-
-                print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
-                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
+                    print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
+                            (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples),
 
             # if e == len(range(epochs)) -1:
             #     cm =  confusion_matrix(y.data,output.max(1)[1].data)
@@ -185,13 +184,14 @@ def train_classification(model, lr=0.01, epochs=20, momentum=0.9, weight_decay =
             #     print "\n F1 score: ", (score) , "\n"
 
             epoch_loss/=samples
-            epoch_acc/=samples
-
             losses[mode].append(epoch_loss)
-            accuracies[mode].append(epoch_acc)
-            print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
-                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
-            print "\n"
+            if type_m == "classification":
+                epoch_acc/=samples
+                accuracies[mode].append(epoch_acc)
+
+                print "\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f\t\t\t\t\t" %  \
+                            (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc),
+                print "\n"
 
             # save model
             if type_m == "classification":
@@ -262,17 +262,17 @@ mini_alexnet_v3_class, mini_alexnet_v3_class_logs = train_classification(mini_al
 plot_logs_classification(mini_alexnet_v3_class_logs)
 
 
-# Regression
-train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transform_prj, reg=True)
-test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transform_prj, reg=True)
-
-train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
-test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
-
-mini_alexnet_v3_reg, mini_alexnet_v3_reg_logs = train_classification(mini_alexnet_v3_reg, \
-                                                                   train_loader=train_loader, \
-                                                                   test_loader=test_loader, \
-                                                                   epochs=2, \
-                                                                   type_m="regression")
-
-plot_logs_classification(mini_alexnet_v3_reg_logs)
+# # Regression
+# train_set = LocalDataset('prj_dataset/images','prj_dataset/training_list.txt',transform=transform_prj, reg=True)
+# test_set = LocalDataset('prj_dataset/images','prj_dataset/validation_list.txt',transform=transform_prj, reg=True)
+#
+# train_loader = DataLoader(train_set, batch_size=32, num_workers=2, shuffle=True)
+# test_loader = DataLoader(test_set, batch_size=32, num_workers=2)
+#
+# mini_alexnet_v3_reg, mini_alexnet_v3_reg_logs = train_classification(mini_alexnet_v3_reg, \
+#                                                                    train_loader=train_loader, \
+#                                                                    test_loader=test_loader, \
+#                                                                    epochs=2, \
+#                                                                    type_m="regression")
+#
+# plot_logs_classification(mini_alexnet_v3_reg_logs)
