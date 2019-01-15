@@ -1,12 +1,12 @@
 # Configuration
 
-DEBUG = True
+DEBUG = False
 
 # training
 EPOCHS = 1
 MOMENTUM = 0.9
 LEARNING_RATE = 0.01
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 THREADS = 8
 
 # file paths

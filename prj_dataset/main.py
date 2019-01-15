@@ -89,15 +89,18 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
                     Y_testing.extend(y.data.tolist())
                     preds.extend(output.max(1)[1].tolist())
                 
-                acc = accuracy_score(y.data, output.max(1)[1]) # output.max(1)[1].data
-                
+                if torch.cuda.is_available():
+                    acc = accuracy_score(y.data.cuda().cpu().numpy(), output.max(1)[1].cuda().cpu().numpy())
+                else:
+                    acc = accuracy_score(y.data, output.max(1)[1])
+
                 epoch_loss += l.data.item()*x.shape[0] # l.data[0]
                 epoch_acc += acc*x.shape[0]
                 samples += x.shape[0]
 
-                #print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
-                #       (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples))
-                
+                print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
+                    (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples))
+
                 #debug
                 if DEBUG and i == 2:
                   break
@@ -131,7 +134,13 @@ def test_model(model_name, model, test_loader = test_set_loader):
     i = 0
     
     for batch in test_loader:
-        pred = model(Variable(batch['image'])).data.numpy().copy()
+        x = Variable(batch['image'])
+        if torch.cuda.is_available():
+            x = x.cuda()
+            pred = model(x).data.cuda().cpu().numpy().copy()
+        else:
+            pred = model(x).data.numpy().copy()
+
         gt = batch['label'].numpy().copy()
         preds.append(pred)
         gts.append(gt)
@@ -194,62 +203,62 @@ def train_model_iter(model_name, model, weight_decay=0):
 resnet18_model = resnet.resnet18(pretrained=False, **classes)
 train_model_iter("resnet18", resnet18_model)
 
-resnet34_model = resnet.resnet34(pretrained=False, **classes)
-train_model_iter("resnet34", resnet34_model)
+# resnet34_model = resnet.resnet34(pretrained=False, **classes)
+# train_model_iter("resnet34", resnet34_model)
 
-resnet50_model = resnet.resnet50(pretrained=False, **classes)
-train_model_iter("resnet50", resnet50_model)
+# resnet50_model = resnet.resnet50(pretrained=False, **classes)
+# train_model_iter("resnet50", resnet50_model)
 
-resnet101_model = resnet.resnet101(pretrained=False, **classes)
-train_model_iter("resnet101", resnet101_model)
+# resnet101_model = resnet.resnet101(pretrained=False, **classes)
+# train_model_iter("resnet101", resnet101_model)
 
-resnet152_model = resnet.resnet152(pretrained=False, **classes)
-train_model_iter("resnet152", resnet152_model)
+# resnet152_model = resnet.resnet152(pretrained=False, **classes)
+# train_model_iter("resnet152", resnet152_model)
 
-# Regularization
+# # Regularization
 
-# Weight Decay
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
+# # Weight Decay
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
 
-resnet34_model = resnet.resnet34(pretrained=False, **classes)
-train_model_iter("resnet34_wd", resnet34_model, weight_decay=WEIGHT_DECAY)
+# resnet34_model = resnet.resnet34(pretrained=False, **classes)
+# train_model_iter("resnet34_wd", resnet34_model, weight_decay=WEIGHT_DECAY)
 
-resnet50_model = resnet.resnet50(pretrained=False, **classes)
-train_model_iter("resnet50_wd", resnet50_model, weight_decay=WEIGHT_DECAY)
+# resnet50_model = resnet.resnet50(pretrained=False, **classes)
+# train_model_iter("resnet50_wd", resnet50_model, weight_decay=WEIGHT_DECAY)
 
-resnet101_model = resnet.resnet101(pretrained=False, **classes)
-train_model_iter("resnet101_wd", resnet101_model, weight_decay=WEIGHT_DECAY)
+# resnet101_model = resnet.resnet101(pretrained=False, **classes)
+# train_model_iter("resnet101_wd", resnet101_model, weight_decay=WEIGHT_DECAY)
 
-resnet152_model = resnet.resnet152(pretrained=False, **classes)
-train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+# resnet152_model = resnet.resnet152(pretrained=False, **classes)
+# train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
 
-# Data Augmentation
-transform = transforms.Compose([transforms.RandomVerticalFlip(),
-                                transforms.ColorJitter(),
-                                transforms.RandomCrop(224),
-                                transforms.ToTensor(),
-                                transforms.Normalize(mean, std_dev)])
+# # Data Augmentation
+# transform = transforms.Compose([transforms.RandomVerticalFlip(),
+#                                 transforms.ColorJitter(),
+#                                 transforms.RandomCrop(224),
+#                                 transforms.ToTensor(),
+#                                 transforms.Normalize(mean, std_dev)])
 
-training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
-validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
-test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
+# training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
+# validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
+# test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
 
-training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
-validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
-test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+# training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
+# validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+# test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18_da", resnet18_model)
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18_da", resnet18_model)
 
-resnet34_model = resnet.resnet34(pretrained=False, **classes)
-train_model_iter("resnet34_da", resnet34_model)
+# resnet34_model = resnet.resnet34(pretrained=False, **classes)
+# train_model_iter("resnet34_da", resnet34_model)
 
-resnet50_model = resnet.resnet50(pretrained=False, **classes)
-train_model_iter("resnet50_da", resnet50_model)
+# resnet50_model = resnet.resnet50(pretrained=False, **classes)
+# train_model_iter("resnet50_da", resnet50_model)
 
-resnet101_model = resnet.resnet101(pretrained=False, **classes)
-train_model_iter("resnet101_da", resnet101_model)
+# resnet101_model = resnet.resnet101(pretrained=False, **classes)
+# train_model_iter("resnet101_da", resnet101_model)
 
-resnet152_model = resnet.resnet152(pretrained=False, **classes)
-train_model_iter("resnet152_da", resnet152_model)
+# resnet152_model = resnet.resnet152(pretrained=False, **classes)
+# train_model_iter("resnet152_da", resnet152_model)
