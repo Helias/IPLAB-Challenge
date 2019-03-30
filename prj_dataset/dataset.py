@@ -9,6 +9,8 @@ from torchvision import transforms
 from PIL import Image
 from os import path
 
+from config import *
+
 class LocalDataset(Dataset):
 
     def __init__(self, base_path, txt_list, transform=None):
