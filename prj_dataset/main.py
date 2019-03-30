@@ -245,11 +245,13 @@ def generate_test(model_name, model):
 
 
 # Resnet 152
-resnet152_model = resnet.resnet152(pretrained=True, **classes)
+resnet152_model = resnet.resnet152(pretrained=True)
+resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
 # train_model_iter("resnet152", resnet152_model)
 
 # VGG 19
-vgg19_model = vgg.vgg19(pretrained=True, **classes)
+vgg19_model = vgg.vgg19(pretrained=True)
+vgg19_model.classifier[6] = nn.Linear(4096, classes["num_classes"]) # change num_classes to pretrained model
 # train_model_iter("resnet152", resnet152_model)
 
 
