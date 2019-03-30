@@ -8,6 +8,7 @@ from torchvision import transforms
 
 from PIL import Image
 from os import path
+
 class LocalDataset(Dataset):
 
     def __init__(self, base_path, txt_list, transform=None):
@@ -16,16 +17,17 @@ class LocalDataset(Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        f,_,_,_,_,c = self.images[index]
+        f,x,y,u,v,c = self.images[index]
 
         im = Image.open(path.join(self.base_path, f))
 
         if self.transform is not None:
             im = self.transform(im)
 
-        label = int(c)
-
-        return { 'image' : im, 'label':label, 'img_name': f }
+        if REGRESSION:
+            return { 'image' : im, 'label': [x,y,u,v], 'img_name': f }    
+        else:
+            return { 'image' : im, 'label': int(c), 'img_name': f }
 
     def __len__(self):
         return len(self.images)

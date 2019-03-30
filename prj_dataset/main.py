@@ -1,11 +1,11 @@
-from dataset import torch, os, LocalDataset, transforms, np
+from dataset import torch, os, LocalDataset, transforms, np, Image
 from config import *
 
 from torch import nn
 from torch.optim import SGD
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from torchvision.models import resnet
+from torchvision.models import resnet, vgg
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
@@ -17,6 +17,8 @@ import gc
 # directory results
 if not os.path.exists(RESULTS_PATH):
     os.makedirs(RESULTS_PATH)
+
+cuda_available = torch.cuda.is_available()
 
 # Load dataset
 
@@ -36,14 +38,21 @@ training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, nu
 validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-classes = {"num_classes": 16}
+if REGRESSION:
+    classes = {"num_classes": 4}
+else:
+    classes = {"num_classes": 16}
 
-def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOMENTUM, weight_decay=0, train_loader=training_set_loader, test_loader=test_set_loader):
+def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOMENTUM, weight_decay=0, train_loader=training_set_loader, test_loader=validation_set_loader):
     
     if not os.path.exists(RESULTS_PATH + "/" + model_name):
         os.makedirs(RESULTS_PATH + "/" + model_name)
     
-    criterion = nn.CrossEntropyLoss()
+    if REGRESSION:
+        criterion = nn.MSELoss()
+    else:
+        criterion = nn.CrossEntropyLoss()
+
     optimizer = SGD(model.parameters(), lr, momentum=momentum, weight_decay=weight_decay)
 
     loaders = {'train':train_loader, 'test':test_loader}
@@ -51,10 +60,10 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
     accuracies = {'train':[], 'test':[]}
 
     #testing variables
-    Y_testing = []
+    y_testing = []
     preds = []
 
-    if torch.cuda.is_available():
+    if USE_CUDA and cuda_available:
         model=model.cuda()
 
     for e in range(epochs):
@@ -69,27 +78,27 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
             samples = 0
 
             for i, batch in enumerate(loaders[mode]):
-                
+
                 # convert tensor to variable
                 x=Variable(batch['image'], requires_grad=(mode=='train'))
                 y=Variable(batch['label'])
-                
-                if torch.cuda.is_available():
+
+                if USE_CUDA and cuda_available:
                     x = x.cuda()
                     y = y.cuda()
 
                 output = model(x)
                 l = criterion(output, y) # loss
-                
+
                 if mode=='train':
                     l.backward()
                     optimizer.step()
                     optimizer.zero_grad()
                 else:
-                    Y_testing.extend(y.data.tolist())
+                    y_testing.extend(y.data.tolist())
                     preds.extend(output.max(1)[1].tolist())
-                
-                if torch.cuda.is_available():
+
+                if USE_CUDA and cuda_available:
                     acc = accuracy_score(y.data.cuda().cpu().numpy(), output.max(1)[1].cuda().cpu().numpy())
                 else:
                     acc = accuracy_score(y.data, output.max(1)[1])
@@ -116,13 +125,13 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
                   (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc))
             
     torch.save(model.state_dict(), str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + ".pt")
-    return model, (losses, accuracies), Y_testing, preds
+    return model, (losses, accuracies), y_testing, preds
 
 
-def test_model(model_name, model, test_loader = test_set_loader):
+def test_model(model_name, model, test_loader=validation_set_loader):
     model.load_state_dict(torch.load(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + ".pt"))
 
-    if torch.cuda.is_available():
+    if USE_CUDA and cuda_available:
         model = model.cuda()
 
     model.eval()
@@ -135,7 +144,7 @@ def test_model(model_name, model, test_loader = test_set_loader):
     
     for batch in test_loader:
         x = Variable(batch['image'])
-        if torch.cuda.is_available():
+        if USE_CUDA and cuda_available:
             x = x.cuda()
             pred = model(x).data.cuda().cpu().numpy().copy()
         else:
@@ -193,44 +202,63 @@ def plot_logs_classification(model_name, logs):
     plt.savefig(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + "_graph.png")
 
 def train_model_iter(model_name, model, weight_decay=0):
-    model, loss_acc, Y_testing, preds = train_model(model_name=model_name, model=model, weight_decay=weight_decay)
+    model, loss_acc, y_testing, preds = train_model(model_name=model_name, model=model, weight_decay=weight_decay)
     preds_test, gts = test_model(model_name, model=model)
-    write_stats(model_name, Y_testing, preds, gts, preds_test)
+    write_stats(model_name, y_testing, preds, gts, preds_test)
     plot_logs_classification(model_name, loss_acc)
     gc.collect()
 
-# Resnet 18, 34, 50, 101, 152
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18", resnet18_model)
+def generate_test(model_name, model):
+    model.load_state_dict(torch.load(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + ".pt"))
 
-# resnet34_model = resnet.resnet34(pretrained=False, **classes)
-# train_model_iter("resnet34", resnet34_model)
+    # test_list = open("test.csv", "r").read().split("\n")
+    test_list = open(TEST_PATH, "r").read().split("\n")
+    test_list.remove('')
 
-# resnet50_model = resnet.resnet50(pretrained=False, **classes)
-# train_model_iter("resnet50", resnet50_model)
+    output_test = ""
 
-# resnet101_model = resnet.resnet101(pretrained=False, **classes)
-# train_model_iter("resnet101", resnet101_model)
+    for img in test_list:
+        image_path = "images/"+str(img)
+        im = Image.open(image_path).convert("RGB")
+        im = transform(im)
 
-# resnet152_model = resnet.resnet152(pretrained=False, **classes)
+        if USE_CUDA and cuda_available:
+            model = model.cuda()
+        model.eval()
+
+        x = Variable(im.unsqueeze(0))
+
+        if USE_CUDA and cuda_available:
+            x = x.cuda()
+            pred = model(x).data.cuda().cpu().numpy().copy()
+        else:
+            pred = model(x).data.numpy().copy()
+
+        idx_max_pred = np.argmax(pred)
+        idx_classes = idx_max_pred % 16
+
+        output_test += str(img)+","+str(idx_classes)+"\n"
+    
+    f = open("output.csv", "w+")
+    f.write(output_test)
+    f.close()
+
+
+# Resnet 152
+resnet152_model = resnet.resnet152(pretrained=True, **classes)
 # train_model_iter("resnet152", resnet152_model)
 
-# # Regularization
+# VGG 19
+vgg19_model = vgg.vgg19(pretrained=True, **classes)
+# train_model_iter("resnet152", resnet152_model)
+
+
+# generate_test("resnet152", resnet152_model)
+
+# Regularization
 
 # # Weight Decay
-# resnet18_model = resnet.resnet18(pretrained=False, **classes)
-# train_model_iter("resnet18_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
-
-# resnet34_model = resnet.resnet34(pretrained=False, **classes)
-# train_model_iter("resnet34_wd", resnet34_model, weight_decay=WEIGHT_DECAY)
-
-# resnet50_model = resnet.resnet50(pretrained=False, **classes)
-# train_model_iter("resnet50_wd", resnet50_model, weight_decay=WEIGHT_DECAY)
-
-# resnet101_model = resnet.resnet101(pretrained=False, **classes)
-# train_model_iter("resnet101_wd", resnet101_model, weight_decay=WEIGHT_DECAY)
-
-# resnet152_model = resnet.resnet152(pretrained=False, **classes)
+# resnet152_model = resnet.resnet152(pretrained=True, **classes)
 # train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
 
 # # Data Augmentation
@@ -248,17 +276,6 @@ train_model_iter("resnet18", resnet18_model)
 # validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 # test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-# resnet18_model = resnet.resnet18(pretrained=False, **classes)
-# train_model_iter("resnet18_da", resnet18_model)
-
-# resnet34_model = resnet.resnet34(pretrained=False, **classes)
-# train_model_iter("resnet34_da", resnet34_model)
-
-# resnet50_model = resnet.resnet50(pretrained=False, **classes)
-# train_model_iter("resnet50_da", resnet50_model)
-
-# resnet101_model = resnet.resnet101(pretrained=False, **classes)
-# train_model_iter("resnet101_da", resnet101_model)
-
-# resnet152_model = resnet.resnet152(pretrained=False, **classes)
 # train_model_iter("resnet152_da", resnet152_model)
+# train_model_iter("resnet152_da_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+

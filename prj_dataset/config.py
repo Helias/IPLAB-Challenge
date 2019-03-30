@@ -1,6 +1,9 @@
 # Configuration
 
+USE_CUDA = False
 DEBUG = False
+
+REGRESSION = False
 
 # training
 EPOCHS = 1
@@ -13,9 +16,10 @@ THREADS = 8
 IMAGES_PATH = "images"
 TRAINING_PATH = "training_list.csv"
 VALIDATION_PATH = "validation_list.csv"
-TEST_PATH = "validation_list.csv"
+TEST_PATH = "testing_list_blind.csv"
 
 RESULTS_PATH="results"
 
 # regularization
 WEIGHT_DECAY=0.005
+
