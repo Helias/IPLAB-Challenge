@@ -98,34 +98,47 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
                     y_testing.extend(y.data.tolist())
                     preds.extend(output.max(1)[1].tolist())
 
-                if USE_CUDA and cuda_available:
-                    acc = accuracy_score(y.data.cuda().cpu().numpy(), output.max(1)[1].cuda().cpu().numpy())
-                else:
-                    acc = accuracy_score(y.data, output.max(1)[1])
+                if not REGRESSION:
+                    if USE_CUDA and cuda_available:
+                        acc = accuracy_score(y.data.cuda().cpu().numpy(), output.max(1)[1].cuda().cpu().numpy())
+                    else:
+                        acc = accuracy_score(y.data, output.max(1)[1])
+
+                    epoch_acc += acc*x.shape[0]
 
                 epoch_loss += l.data.item()*x.shape[0] # l.data[0]
-                epoch_acc += acc*x.shape[0]
                 samples += x.shape[0]
 
-                print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
-                    (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples))
+                if not REGRESSION:
+                    print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples, epoch_acc/samples))
+                else:
+                    print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f." % \
+                        (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss/samples))
+
 
                 #debug
                 if DEBUG and i == 2:
                   break
 
             epoch_loss /= samples
-            epoch_acc /= samples
-            
             losses[mode].append(epoch_loss)
-            accuracies[mode].append(epoch_acc)
 
-
-            print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
-                  (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc))
+            if not REGRESSION:
+                epoch_acc /= samples        
+                accuracies[mode].append(epoch_acc)
+                print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f. Accuracy: %0.2f" % \
+                    (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss, epoch_acc))
+            else:
+                print ("\r[%s] Epoch %d/%d. Iteration %d/%d. Loss: %0.2f." % \
+                    (mode, e+1, epochs, i, len(loaders[mode]), epoch_loss))
             
     torch.save(model.state_dict(), str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + ".pt")
-    return model, (losses, accuracies), y_testing, preds
+
+    if not REGRESSION:
+        return model, (losses, accuracies), y_testing, preds
+    else:
+        return model, (losses, 0), y_testing, preds
 
 
 def test_model(model_name, model, test_loader=validation_set_loader):
@@ -184,8 +197,12 @@ def plot_logs_classification(model_name, logs):
     if not os.path.exists(RESULTS_PATH + "/" + model_name):
         os.makedirs(RESULTS_PATH + "/" + model_name)
 
-    training_losses, training_accuracies, test_losses, test_accuracies = \
-        logs[0]['train'], logs[1]['train'], logs[0]['test'], logs[1]['test']
+    if not REGRESSION:
+        training_losses, training_accuracies, test_losses, test_accuracies = \
+            logs[0]['train'], logs[1]['train'], logs[0]['test'], logs[1]['test']
+    else:
+        training_losses, _, test_losses, __ = logs[0]['train'], 0, logs[0]['test'], 0
+
 
     plt.figure(figsize=(18,6))
     plt.subplot(121)
@@ -245,13 +262,13 @@ def generate_test(model_name, model):
 
 
 # Resnet 152
-resnet152_model = resnet.resnet152(pretrained=True)
-resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
-train_model_iter("resnet152", resnet152_model)
+resnet152_model = resnet.resnet152(pretrained=False, **classes)
+# resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
+# train_model_iter("resnet152", resnet152_model)
 
 # VGG 19
-vgg19_model = vgg.vgg19(pretrained=True)
-vgg19_model.classifier[6] = nn.Linear(4096, classes["num_classes"]) # change num_classes to pretrained model
+vgg19_model = vgg.vgg19(pretrained=False, **classes)
+# vgg19_model.classifier[6] = nn.Linear(4096, classes["num_classes"]) # change num_classes to pretrained model
 train_model_iter("vgg19", vgg19_model)
 
 
