@@ -253,10 +253,16 @@ def generate_test(model_name, model):
         else:
             pred = model(x).data.numpy().copy()
 
-        idx_max_pred = np.argmax(pred)
-        idx_classes = idx_max_pred % 16
 
-        output_test += str(img)+","+str(idx_classes)+"\n"
+        if not REGRESSION:
+            idx_max_pred = np.argmax(pred)
+            idx_classes = idx_max_pred % 16
+
+            output_test += str(img)+","+str(idx_classes)+"\n"
+        else:
+            for i in pred[0]:
+                output_test += str(img)+","+str(i)+", "
+        output_test+="\n"
     
     f = open(model_name+"_output.csv", "w+")
     f.write(output_test)
@@ -264,43 +270,43 @@ def generate_test(model_name, model):
 
 
 # Resnet 18
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18", resnet18_model)
-generate_test("resnet18", resnet18_model)
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18", resnet18_model)
+# generate_test("resnet18", resnet18_model)
 
-# # VGG 19
-# vgg19_model = vgg.vgg19(pretrained=False, **classes)
-# # train_model_iter("vgg19", vgg19_model)
-# generate_test("vgg19", vgg19_model)
+# VGG 19
+vgg19_model = vgg.vgg19(pretrained=False, **classes)
+# train_model_iter("vgg19", vgg19_model)
+generate_test("vgg19", vgg19_model)
 
 
-# Regularization
+# # Regularization
 
-# Weight Decay
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18_wd", resnet18, weight_decay=WEIGHT_DECAY)
-generate_test("resnet18_wd", resnet18_model)
+# # Weight Decay
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18_wd", resnet18, weight_decay=WEIGHT_DECAY)
+# generate_test("resnet18_wd", resnet18_model)
 
-# Data Augmentation
-transform = transforms.Compose([transforms.RandomVerticalFlip(),
-                                transforms.ColorJitter(),
-                                transforms.RandomCrop(224),
-                                transforms.ToTensor(),
-                                transforms.Normalize(mean, std_dev)])
+# # Data Augmentation
+# transform = transforms.Compose([transforms.RandomVerticalFlip(),
+#                                 transforms.ColorJitter(),
+#                                 transforms.RandomCrop(224),
+#                                 transforms.ToTensor(),
+#                                 transforms.Normalize(mean, std_dev)])
 
-training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
-validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
-test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
+# training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
+# validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
+# test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
 
-training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
-validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
-test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+# training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
+# validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+# test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18_da", resnet18_model)
-generate_test("resnet18_da", resnet18_model)
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18_da", resnet18_model)
+# generate_test("resnet18_da", resnet18_model)
 
-resnet18_model = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18_da_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
-generate_test("resnet18_da_wd", resnet18_model)
+# resnet18_model = resnet.resnet18(pretrained=False, **classes)
+# train_model_iter("resnet18_da_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
+# generate_test("resnet18_da_wd", resnet18_model)
 
