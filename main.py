@@ -179,13 +179,17 @@ def write_stats(model_name, Y, predictions, gts, predictions2):
     if not os.path.exists(RESULTS_PATH + "/" + model_name):
         os.makedirs(RESULTS_PATH + "/" + model_name)
 
-    acc = accuracy_score(gts, predictions2.argmax(1))
-    cm = confusion_matrix(Y, predictions)
-
-    if DEBUG:
-      score = "00 F1_SCORE 00"
+    if not REGRESSION:
+         acc = accuracy_score(gts, predictions2.argmax(1))
+         cm = confusion_matrix(Y, predictions)
     else:
-      score = f1_score(Y, predictions, average=None)
+        acc = 0
+        cm = 0
+
+        if DEBUG:
+             score = "00 F1_SCORE 00"
+        else:
+          score = f1_score(Y, predictions, average=None)
     
     file = open(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + "_stats.txt", "w+")
     file.write ("Accuracy: " + str(acc) + "\n\n")
