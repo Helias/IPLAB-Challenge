@@ -210,13 +210,14 @@ def plot_logs_classification(model_name, logs):
     plt.plot(training_losses)
     plt.plot(test_losses)
     plt.legend(['Training Loss','Test Losses'])
-    plt.grid()
-    plt.subplot(122)
-    plt.plot(training_accuracies)
-    plt.plot(test_accuracies)
-    plt.legend(['Training Accuracy','Test Accuracy'])
-    plt.grid()
-    #plt.show()
+    if not REGRESSION:
+        plt.grid()
+        plt.subplot(122)
+        plt.plot(training_accuracies)
+        plt.plot(test_accuracies)
+        plt.legend(['Training Accuracy','Test Accuracy'])
+        plt.grid()
+        #plt.show()
     plt.savefig(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + "_graph.png")
 
 def train_model_iter(model_name, model, weight_decay=0):
