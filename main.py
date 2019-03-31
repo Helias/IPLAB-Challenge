@@ -264,22 +264,22 @@ def generate_test(model_name, model):
 
 
 # Resnet 18
-resnet18 = resnet.resnet18(pretrained=False, **classes)
-train_model_iter("resnet18", resnet18)
-generate_test("resnet18", resnet18)
+resnet18_model = resnet.resnet18(pretrained=False, **classes)
+train_model_iter("resnet18", resnet18_model)
+generate_test("resnet18", resnet18_model)
 
-# VGG 19
+# # VGG 19
 # vgg19_model = vgg.vgg19(pretrained=False, **classes)
-# vgg19_model.classifier[6] = nn.Linear(4096, classes["num_classes"]) # change num_classes to pretrained model
-# train_model_iter("vgg19", vgg19_model)
+# # train_model_iter("vgg19", vgg19_model)
+# generate_test("vgg19", vgg19_model)
 
 
 # Regularization
 
 # Weight Decay
-resnet18 = resnet.resnet18(pretrained=False, **classes)
+resnet18_model = resnet.resnet18(pretrained=False, **classes)
 train_model_iter("resnet18_wd", resnet18, weight_decay=WEIGHT_DECAY)
-generate_test("resnet18_wd", resnet18)
+generate_test("resnet18_wd", resnet18_model)
 
 # Data Augmentation
 transform = transforms.Compose([transforms.RandomVerticalFlip(),
@@ -296,9 +296,11 @@ training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, nu
 validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-train_model_iter("resnet18_da", resnet18)
-generate_test("resnet18_da", resnet18)
+resnet18_model = resnet.resnet18(pretrained=False, **classes)
+train_model_iter("resnet18_da", resnet18_model)
+generate_test("resnet18_da", resnet18_model)
 
-train_model_iter("resnet18_da_wd", resnet18, weight_decay=WEIGHT_DECAY)
-generate_test("resnet18_da_wd", resnet18)
+resnet18_model = resnet.resnet18(pretrained=False, **classes)
+train_model_iter("resnet18_da_wd", resnet18_model, weight_decay=WEIGHT_DECAY)
+generate_test("resnet18_da_wd", resnet18_model)
 
