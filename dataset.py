@@ -5,6 +5,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from torch.autograd import Variable
 
 from PIL import Image
 from os import path
@@ -27,9 +28,16 @@ class LocalDataset(Dataset):
             im = self.transform(im)
 
         if REGRESSION:
-            return { 'image' : im, 'label': [x,y,u,v], 'img_name': f }    
+            label = torch.tensor([
+                float(x),
+                float(y),
+                float(u),
+                float(v)
+            ])
         else:
-            return { 'image' : im, 'label': int(c), 'img_name': f }
+            label = int(c)
+
+        return { 'image' : im, 'label': label, 'img_name': f }
 
     def __len__(self):
         return len(self.images)

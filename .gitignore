@@ -1,1 +1,3 @@
-prj_dataset/results/*
+results/*
+__pycache__/
+.vscode/
