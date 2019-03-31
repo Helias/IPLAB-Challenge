@@ -83,6 +83,8 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
                 x=Variable(batch['image'], requires_grad=(mode=='train'))
                 y=Variable(batch['label'])
 
+		print(batch["label"])
+
                 if USE_CUDA and cuda_available:
                     x = x.cuda()
                     y = y.cuda()
@@ -265,38 +267,38 @@ def generate_test(model_name, model):
 
 # Resnet 152
 resnet152_model = resnet.resnet152(pretrained=False, **classes)
-# resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
-# train_model_iter("resnet152", resnet152_model)
+resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
+train_model_iter("resnet152", resnet152_model)
 
 # VGG 19
-vgg19_model = vgg.vgg19(pretrained=False, **classes)
+# vgg19_model = vgg.vgg19(pretrained=False, **classes)
 # vgg19_model.classifier[6] = nn.Linear(4096, classes["num_classes"]) # change num_classes to pretrained model
-train_model_iter("vgg19", vgg19_model)
+# train_model_iter("vgg19", vgg19_model)
 
 
 # generate_test("resnet152", resnet152_model)
 
 # Regularization
 
-# # Weight Decay
-# resnet152_model = resnet.resnet152(pretrained=True, **classes)
-# train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+# Weight Decay
+resnet152_model = resnet.resnet152(pretrained=True, **classes)
+train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
 
-# # Data Augmentation
-# transform = transforms.Compose([transforms.RandomVerticalFlip(),
-#                                 transforms.ColorJitter(),
-#                                 transforms.RandomCrop(224),
-#                                 transforms.ToTensor(),
-#                                 transforms.Normalize(mean, std_dev)])
+# Data Augmentation
+transform = transforms.Compose([transforms.RandomVerticalFlip(),
+                                transforms.ColorJitter(),
+                                transforms.RandomCrop(224),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean, std_dev)])
 
-# training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
-# validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
-# test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
+training_set = LocalDataset(IMAGES_PATH, TRAINING_PATH, transform=transform)
+validation_set = LocalDataset(IMAGES_PATH, VALIDATION_PATH, transform=transform)
+test_set = LocalDataset(IMAGES_PATH, TEST_PATH, transform=transform)
 
-# training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
-# validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
-# test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=True)
+validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
+test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-# train_model_iter("resnet152_da", resnet152_model)
-# train_model_iter("resnet152_da_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+train_model_iter("resnet152_da", resnet152_model)
+train_model_iter("resnet152_da_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
 
