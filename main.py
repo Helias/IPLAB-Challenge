@@ -83,8 +83,6 @@ def train_model(model_name, model, lr=LEARNING_RATE, epochs=EPOCHS, momentum=MOM
                 x=Variable(batch['image'], requires_grad=(mode=='train'))
                 y=Variable(batch['label'])
 
-		print(batch["label"])
-
                 if USE_CUDA and cuda_available:
                     x = x.cuda()
                     y = y.cuda()
@@ -260,15 +258,15 @@ def generate_test(model_name, model):
 
         output_test += str(img)+","+str(idx_classes)+"\n"
     
-    f = open("output.csv", "w+")
+    f = open(model_name+"_output.csv", "w+")
     f.write(output_test)
     f.close()
 
 
-# Resnet 152
-resnet152_model = resnet.resnet152(pretrained=False, **classes)
-resnet152_model.fc = nn.Linear(512, classes["num_classes"]) # change num_classes to pretrained model
-train_model_iter("resnet152", resnet152_model)
+# Resnet 18
+resnet18 = resnet.resnet18(pretrained=False, **classes)
+train_model_iter("resnet18", resnet18)
+generate_test("resnet18", resnet18)
 
 # VGG 19
 # vgg19_model = vgg.vgg19(pretrained=False, **classes)
@@ -276,13 +274,12 @@ train_model_iter("resnet152", resnet152_model)
 # train_model_iter("vgg19", vgg19_model)
 
 
-# generate_test("resnet152", resnet152_model)
-
 # Regularization
 
 # Weight Decay
-resnet152_model = resnet.resnet152(pretrained=True, **classes)
-train_model_iter("resnet152_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+resnet18 = resnet.resnet18(pretrained=False, **classes)
+train_model_iter("resnet18_wd", resnet18, weight_decay=WEIGHT_DECAY)
+generate_test("resnet18_wd", resnet18)
 
 # Data Augmentation
 transform = transforms.Compose([transforms.RandomVerticalFlip(),
@@ -299,6 +296,9 @@ training_set_loader = DataLoader(dataset=training_set, batch_size=BATCH_SIZE, nu
 validation_set_loader = DataLoader(dataset=validation_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 test_set_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, num_workers=THREADS, shuffle=False)
 
-train_model_iter("resnet152_da", resnet152_model)
-train_model_iter("resnet152_da_wd", resnet152_model, weight_decay=WEIGHT_DECAY)
+train_model_iter("resnet18_da", resnet18)
+generate_test("resnet18_da", resnet18)
+
+train_model_iter("resnet18_da_wd", resnet18, weight_decay=WEIGHT_DECAY)
+generate_test("resnet18_da_wd", resnet18)
 
