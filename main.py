@@ -180,22 +180,20 @@ def write_stats(model_name, Y, predictions, gts, predictions2):
         os.makedirs(RESULTS_PATH + "/" + model_name)
 
     if not REGRESSION:
-         acc = accuracy_score(gts, predictions2.argmax(1))
-         cm = confusion_matrix(Y, predictions)
-    else:
-        acc = 0
-        cm = 0
+        acc = accuracy_score(gts, predictions2.argmax(1))
+        cm = confusion_matrix(Y, predictions)
 
         if DEBUG:
-             score = "00 F1_SCORE 00"
+            score = "00 F1_SCORE 00"
         else:
-          score = f1_score(Y, predictions, average=None)
+            score = f1_score(Y, predictions, average=None)
+
+        file = open(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + "_stats.txt", "w+")
+        file.write ("Accuracy: " + str(acc) + "\n\n")
+        file.write("Confusion Matrix: \n" + str(cm) + "\n\n")
+        file.write("F1 Score: \n" + str(score))
+        file.close()
     
-    file = open(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + "_stats.txt", "w+")
-    file.write ("Accuracy: " + str(acc) + "\n\n")
-    file.write("Confusion Matrix: \n" + str(cm) + "\n\n")
-    file.write("F1 Score: \n" + str(score))
-    file.close()
 
 def plot_logs_classification(model_name, logs):
     if not os.path.exists(RESULTS_PATH + "/" + model_name):
@@ -206,7 +204,6 @@ def plot_logs_classification(model_name, logs):
             logs[0]['train'], logs[1]['train'], logs[0]['test'], logs[1]['test']
     else:
         training_losses, _, test_losses, __ = logs[0]['train'], 0, logs[0]['test'], 0
-
 
     plt.figure(figsize=(18,6))
     plt.subplot(121)
