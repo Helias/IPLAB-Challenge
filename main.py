@@ -268,6 +268,39 @@ def generate_test(model_name, model):
     f.write(output_test)
     f.close()
 
+def generate_test_da(model_name, model, test_loader=test_set_loader):
+    model.load_state_dict(torch.load(str(RESULTS_PATH) + "/" + str(model_name) + "/" + str(model_name) + ".pt"))
+
+    if USE_CUDA and cuda_available:
+        model = model.cuda()
+
+    model.eval()
+
+    preds = []
+    gts = []
+    
+    for batch in test_loader:
+        x = Variable(batch['image'])
+        if USE_CUDA and cuda_available:
+            x = x.cuda()
+            pred = model(x).data.cuda().cpu().numpy().copy()
+        else:
+            pred = model(x).data.numpy().copy()
+
+        gt = batch['label'].numpy().copy()
+        preds.append(pred)
+        gts.append(gt)
+
+    output_test = ""
+    for i in range(len(preds)):
+        for j in range(len(preds[i])):
+            for p in range(len(preds[i][j])):
+                output_test += ","+str(preds[i][j][p])
+            output_test+="\n"
+
+    f = open(model_name+"_output.csv", "w+")
+    f.write(output_test)
+    f.close()
 
 # Resnet 18
 # resnet18_model = resnet.resnet18(pretrained=False, **classes)
@@ -292,7 +325,7 @@ def generate_test(model_name, model):
 # train_model_iter("vgg19_wd", vgg19_model)
 # generate_test("vgg19_wd", vgg19_model)
 
-# # Data Augmentation
+# Data Augmentation
 # transform = transforms.Compose([transforms.RandomVerticalFlip(),
 #                                 transforms.ColorJitter(),
 #                                 transforms.RandomCrop(224),
@@ -315,4 +348,4 @@ def generate_test(model_name, model):
 # VGG 19 Data Augmentation
 # vgg19_model = vgg.vgg19(pretrained=False, **classes)
 # train_model_iter("vgg19_da", vgg19_model)
-# generate_test("vgg19_da", vgg19_model)
+# generate_test_da("vgg19_da", vgg19_model)

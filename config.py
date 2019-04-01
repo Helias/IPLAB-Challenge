@@ -3,7 +3,7 @@
 USE_CUDA = False
 DEBUG = False
 
-REGRESSION = True
+REGRESSION = False
 
 # training
 EPOCHS = 1
